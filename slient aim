@@ -1,0 +1,281 @@
+--// SERVICES
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+--// ESP VARS
+local ESPEnabled = false
+local ESP_CACHE = {}
+
+--// STATS VARS
+local StatsVisible = false
+local FPS = 0
+
+--// SILENT AIM VARS
+local SilentAimEnabled = false
+
+--// GUI TOGGLE VAR
+local GUIVisible = true
+
+--// ================= UI =================
+
+local ScreenGui = Instance.new("ScreenGui", PlayerGui)
+ScreenGui.Name = "DylanGUI"
+ScreenGui.ResetOnSpawn = false
+
+local Main = Instance.new("Frame", ScreenGui)
+Main.Size = UDim2.fromScale(0.45, 0.5)
+Main.Position = UDim2.fromScale(0.275, 0.25)
+Main.BorderSizePixel = 0
+Main.Active = true
+Main.Draggable = true
+
+local Gradient = Instance.new("UIGradient", Main)
+Gradient.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255,215,0)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(255,115,0))
+}
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0,18)
+
+-- Sidebar
+local Sidebar = Instance.new("Frame", Main)
+Sidebar.Size = UDim2.fromScale(0.25,1)
+Sidebar.BackgroundColor3 = Color3.fromRGB(20,20,20)
+Sidebar.BorderSizePixel = 0
+Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0,18)
+
+local Title = Instance.new("TextLabel", Sidebar)
+Title.Size = UDim2.fromScale(1,0.18)
+Title.BackgroundTransparency = 1
+Title.Text = "🔥 DYLAN GUI"
+Title.TextColor3 = Color3.fromRGB(255,190,0)
+Title.Font = Enum.Font.GothamBold
+Title.TextScaled = true
+
+local function MakeButton(text,y)
+	local b = Instance.new("TextButton", Sidebar)
+	b.Size = UDim2.fromScale(0.85,0.12)
+	b.Position = UDim2.fromScale(0.075,y)
+	b.BackgroundColor3 = Color3.fromRGB(35,35,35)
+	b.Text = text
+	b.TextColor3 = Color3.fromRGB(255,200,0)
+	b.Font = Enum.Font.GothamSemibold
+	b.TextScaled = true
+	b.BorderSizePixel = 0
+	Instance.new("UICorner", b).CornerRadius = UDim.new(0,12)
+	return b
+end
+
+local ESPBtn = MakeButton("ESP",0.25)
+local AimBtn = MakeButton("Silent Aim",0.42)
+local StatsBtn = MakeButton("Stats",0.59)
+
+-- Content
+local Content = Instance.new("Frame", Main)
+Content.Size = UDim2.fromScale(0.75,1)
+Content.Position = UDim2.fromScale(0.25,0)
+Content.BackgroundTransparency = 1
+
+local ContentText = Instance.new("TextLabel", Content)
+ContentText.Size = UDim2.fromScale(1,0.3)
+ContentText.BackgroundTransparency = 1
+ContentText.Text = "Select a tab 👀"
+ContentText.Font = Enum.Font.GothamBold
+ContentText.TextScaled = true
+ContentText.TextColor3 = Color3.fromRGB(25,25,25)
+
+-- ESP Toggle
+local ESPToggle = Instance.new("TextButton", Content)
+ESPToggle.Size = UDim2.fromScale(0.4,0.12)
+ESPToggle.Position = UDim2.fromScale(0.3,0.35)
+ESPToggle.BackgroundColor3 = Color3.fromRGB(30,30,30)
+ESPToggle.Text = "ESP : OFF"
+ESPToggle.TextColor3 = Color3.fromRGB(255,170,0)
+ESPToggle.Font = Enum.Font.GothamBold
+ESPToggle.TextScaled = true
+ESPToggle.Visible = false
+ESPToggle.BorderSizePixel = 0
+Instance.new("UICorner", ESPToggle).CornerRadius = UDim.new(0,14)
+
+-- Silent Aim Toggle
+local AimToggle = Instance.new("TextButton", Content)
+AimToggle.Size = UDim2.fromScale(0.4,0.12)
+AimToggle.Position = UDim2.fromScale(0.3,0.35)
+AimToggle.BackgroundColor3 = Color3.fromRGB(30,30,30)
+AimToggle.Text = "Silent Aim : OFF"
+AimToggle.TextColor3 = Color3.fromRGB(255,170,0)
+AimToggle.Font = Enum.Font.GothamBold
+AimToggle.TextScaled = true
+AimToggle.Visible = false
+AimToggle.BorderSizePixel = 0
+Instance.new("UICorner", AimToggle).CornerRadius = UDim.new(0,14)
+
+-- Stats Label
+local StatsLabel = Instance.new("TextLabel", Content)
+StatsLabel.Size = UDim2.fromScale(1,0.3)
+StatsLabel.Position = UDim2.fromScale(0,0.35)
+StatsLabel.BackgroundTransparency = 1
+StatsLabel.Font = Enum.Font.GothamBold
+StatsLabel.TextScaled = true
+StatsLabel.TextColor3 = Color3.fromRGB(25,25,25)
+StatsLabel.Visible = false
+
+-- Tab Logic
+ESPBtn.MouseButton1Click:Connect(function()
+	ContentText.Text = "ESP SETTINGS"
+	ESPToggle.Visible = true
+	AimToggle.Visible = false
+	StatsLabel.Visible = false
+	StatsVisible = false
+end)
+
+AimBtn.MouseButton1Click:Connect(function()
+	ContentText.Text = "SILENT AIM"
+	ESPToggle.Visible = false
+	AimToggle.Visible = true
+	StatsLabel.Visible = false
+	StatsVisible = false
+end)
+
+StatsBtn.MouseButton1Click:Connect(function()
+	ContentText.Text = "PLAYER STATS"
+	ESPToggle.Visible = false
+	AimToggle.Visible = false
+	StatsLabel.Visible = true
+	StatsVisible = true
+end)
+
+--// ================= ESP =================
+
+local function GetESPColor(player)
+	if player.Team and LocalPlayer.Team then
+		return player.Team.TeamColor.Color
+	end
+	return Color3.fromRGB(255,170,0)
+end
+
+local function CreateESP(player)
+	if player == LocalPlayer or ESP_CACHE[player] then return end
+	local box = Drawing.new("Square")
+	box.Thickness = 2
+	box.Filled = false
+	box.Visible = false
+
+	local name = Drawing.new("Text")
+	name.Size = 14
+	name.Center = true
+	name.Outline = true
+	name.Visible = false
+
+	ESP_CACHE[player] = {Box = box, Name = name}
+end
+
+local function RemoveESP(player)
+	if ESP_CACHE[player] then
+		for _,v in pairs(ESP_CACHE[player]) do v:Remove() end
+		ESP_CACHE[player] = nil
+	end
+end
+
+RunService.RenderStepped:Connect(function()
+	for player,esp in pairs(ESP_CACHE) do
+		local char = player.Character
+		local hrp = char and char:FindFirstChild("HumanoidRootPart")
+		local hum = char and char:FindFirstChild("Humanoid")
+
+		if ESPEnabled and hrp and hum and hum.Health > 0 then
+			local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+			if onScreen then
+				local top = Camera:WorldToViewportPoint(hrp.Position + Vector3.new(0,3,0))
+				local bottom = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0,3,0))
+				local h = math.abs(top.Y - bottom.Y)
+				local w = h / 2
+
+				local c = GetESPColor(player)
+				esp.Box.Color = c
+				esp.Name.Color = c
+
+				esp.Box.Size = Vector2.new(w,h)
+				esp.Box.Position = Vector2.new(pos.X-w/2,pos.Y-h/2)
+				esp.Box.Visible = true
+
+				esp.Name.Text = player.DisplayName.." (@"..player.Name..")"
+				esp.Name.Position = Vector2.new(pos.X,pos.Y-h/2-14)
+				esp.Name.Visible = true
+			else
+				esp.Box.Visible = false
+				esp.Name.Visible = false
+			end
+		else
+			esp.Box.Visible = false
+			esp.Name.Visible = false
+		end
+	end
+end)
+
+for _,p in pairs(Players:GetPlayers()) do CreateESP(p) end
+Players.PlayerAdded:Connect(CreateESP)
+Players.PlayerRemoving:Connect(RemoveESP)
+
+ESPToggle.MouseButton1Click:Connect(function()
+	ESPEnabled = not ESPEnabled
+	ESPToggle.Text = ESPEnabled and "ESP : ON" or "ESP : OFF"
+end)
+
+--// ================= STATS =================
+
+task.spawn(function()
+	while true do
+		local t = tick()
+		RunService.RenderStepped:Wait()
+		FPS = math.floor(1 / (tick() - t))
+	end
+end)
+
+RunService.RenderStepped:Connect(function()
+	if StatsVisible then
+		local ping = math.floor((LocalPlayer:GetNetworkPing() or 0) * 1000)
+		StatsLabel.Text = "📊 STATS\n\nFPS : "..FPS.."\nPing : "..ping.." ms"
+	end
+end)
+
+--// ================= SILENT AIM =================
+
+task.spawn(function()
+	while true do
+		task.wait(1)
+		if SilentAimEnabled then
+			for _, v in pairs(Players:GetPlayers()) do
+				if v ~= LocalPlayer and v.Character then
+					for _, partName in ipairs({
+						"RightUpperLeg","LeftUpperLeg","HeadHB","HumanoidRootPart"
+					}) do
+						local part = v.Character:FindFirstChild(partName)
+						if part then
+							part.CanCollide = false
+							part.Transparency = 10
+							part.Size = Vector3.new(13,13,13)
+						end
+					end
+				end
+			end
+		end
+	end
+end)
+
+AimToggle.MouseButton1Click:Connect(function()
+	SilentAimEnabled = not SilentAimEnabled
+	AimToggle.Text = SilentAimEnabled and "Silent Aim : ON" or "Silent Aim : OFF"
+end)
+
+--// ================= GUI KEYBIND =================
+UserInputService.InputBegan:Connect(function(input, processed)
+	if processed then return end
+	if input.KeyCode == Enum.KeyCode.P then
+		GUIVisible = not GUIVisible
+		Main.Visible = GUIVisible
+	end
+end)
