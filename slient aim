@@ -6,164 +6,221 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
---// ESP VARS
+--// VARS
 local ESPEnabled = false
+local SilentAimEnabled = false
+local FPS = 0
+local GUIVisible = true
 local ESP_CACHE = {}
 
---// STATS VARS
-local StatsVisible = false
-local FPS = 0
-
---// SILENT AIM VARS
-local SilentAimEnabled = false
-
---// GUI TOGGLE VAR
-local GUIVisible = true
-
 --// ================= UI =================
-
-local ScreenGui = Instance.new("ScreenGui", PlayerGui)
+local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "DylanGUI"
 ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
 
-local Main = Instance.new("Frame", ScreenGui)
-Main.Size = UDim2.fromScale(0.35, 0.4) -- smaller UI
-Main.Position = UDim2.fromScale(0.325, 0.3)
+local Main = Instance.new("Frame")
+Main.Size = UDim2.fromScale(0.28,0.32)
+Main.Position = UDim2.fromScale(0.36,0.34)
 Main.BorderSizePixel = 0
 Main.Active = true
 Main.Draggable = true
+Main.Parent = ScreenGui
 
-local Gradient = Instance.new("UIGradient", Main)
+-- Black & White Gradient
+local Gradient = Instance.new("UIGradient")
 Gradient.Color = ColorSequence.new{
-	ColorSequenceKeypoint.new(0, Color3.fromRGB(0,0,0)),  -- black
-	ColorSequenceKeypoint.new(1, Color3.fromRGB(255,255,255)) -- white
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(0,0,0)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(255,255,255))
 }
-Instance.new("UICorner", Main).CornerRadius = UDim.new(0,14)
+Gradient.Rotation = 45
+Gradient.Parent = Main
 
--- Sidebar
-local Sidebar = Instance.new("Frame", Main)
-Sidebar.Size = UDim2.fromScale(0.25,1)
-Sidebar.BackgroundColor3 = Color3.fromRGB(20,20,20)
-Sidebar.BorderSizePixel = 0
-Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0,14)
+-- Border Glow
+local Stroke = Instance.new("UIStroke")
+Stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+Stroke.Color = Color3.fromRGB(255,255,255)
+Stroke.Transparency = 0.7
+Stroke.Thickness = 2
+Stroke.Parent = Main
 
-local Title = Instance.new("TextLabel", Sidebar)
+-- Sharper corners
+Instance.new("UICorner",Main).CornerRadius = UDim.new(0,6)
+
+-- Title
+local Title = Instance.new("TextLabel")
 Title.Size = UDim2.fromScale(1,0.18)
+Title.Position = UDim2.fromScale(0,0)
 Title.BackgroundTransparency = 1
-Title.Text = "🔥 DYLAN GUI"
+Title.Text = "Dylan GUI"
 Title.TextColor3 = Color3.fromRGB(255,255,255)
 Title.Font = Enum.Font.GothamBold
 Title.TextScaled = true
+Title.Parent = Main
 
-local function MakeButton(text,y)
-	local b = Instance.new("TextButton", Sidebar)
-	b.Size = UDim2.fromScale(0.85,0.12)
-	b.Position = UDim2.fromScale(0.075,y)
-	b.BackgroundColor3 = Color3.fromRGB(35,35,35)
-	b.Text = text
-	b.TextColor3 = Color3.fromRGB(255,255,255)
-	b.Font = Enum.Font.GothamSemibold
-	b.TextScaled = true
-	b.BorderSizePixel = 0
-	Instance.new("UICorner", b).CornerRadius = UDim.new(0,12)
-	return b
+-- Buttons
+local function MakeButton(text,posY)
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.fromScale(0.6,0.12)
+	btn.Position = UDim2.fromScale(0.2,posY)
+	btn.BackgroundColor3 = Color3.fromRGB(20,20,20)
+	btn.Text = text
+	btn.TextColor3 = Color3.fromRGB(255,255,255)
+	btn.Font = Enum.Font.GothamBold
+	btn.TextScaled = true
+	btn.BorderSizePixel = 0
+	btn.Parent = Main
+	Instance.new("UICorner",btn).CornerRadius = UDim.new(0,6)
+
+	-- Hover effect
+	btn.MouseEnter:Connect(function()
+		btn.BackgroundColor3 = Color3.fromRGB(45,45,45)
+	end)
+	btn.MouseLeave:Connect(function()
+		btn.BackgroundColor3 = Color3.fromRGB(20,20,20)
+	end)
+	return btn
 end
 
-local ESPBtn = MakeButton("ESP",0.25)
-local AimBtn = MakeButton("Silent Aim",0.42)
-local StatsBtn = MakeButton("Stats",0.59)
+local ESPToggle = MakeButton("ESP : OFF",0.25)
+local AimToggle = MakeButton("Silent Aim : OFF",0.45)
 
--- Content
-local Content = Instance.new("Frame", Main)
-Content.Size = UDim2.fromScale(0.75,1)
-Content.Position = UDim2.fromScale(0.25,0)
-Content.BackgroundTransparency = 1
-
-local ContentText = Instance.new("TextLabel", Content)
-ContentText.Size = UDim2.fromScale(1,0.3)
-ContentText.BackgroundTransparency = 1
-ContentText.Text = "Select a tab 👀"
-ContentText.Font = Enum.Font.GothamBold
-ContentText.TextScaled = true
-ContentText.TextColor3 = Color3.fromRGB(255,255,255)
-
--- ESP Toggle
-local ESPToggle = Instance.new("TextButton", Content)
-ESPToggle.Size = UDim2.fromScale(0.4,0.12)
-ESPToggle.Position = UDim2.fromScale(0.3,0.35)
-ESPToggle.BackgroundColor3 = Color3.fromRGB(30,30,30)
-ESPToggle.Text = "ESP : OFF"
-ESPToggle.TextColor3 = Color3.fromRGB(255,255,255)
-ESPToggle.Font = Enum.Font.GothamBold
-ESPToggle.TextScaled = true
-ESPToggle.Visible = false
-ESPToggle.BorderSizePixel = 0
-Instance.new("UICorner", ESPToggle).CornerRadius = UDim.new(0,14)
-
--- Silent Aim Toggle
-local AimToggle = Instance.new("TextButton", Content)
-AimToggle.Size = UDim2.fromScale(0.4,0.12)
-AimToggle.Position = UDim2.fromScale(0.3,0.35)
-AimToggle.BackgroundColor3 = Color3.fromRGB(30,30,30)
-AimToggle.Text = "Silent Aim : OFF"
-AimToggle.TextColor3 = Color3.fromRGB(255,255,255)
-AimToggle.Font = Enum.Font.GothamBold
-AimToggle.TextScaled = true
-AimToggle.Visible = false
-AimToggle.BorderSizePixel = 0
-Instance.new("UICorner", AimToggle).CornerRadius = UDim.new(0,14)
-
--- Stats Label
-local StatsLabel = Instance.new("TextLabel", Content)
-StatsLabel.Size = UDim2.fromScale(1,0.3)
-StatsLabel.Position = UDim2.fromScale(0,0.35)
+-- Stats
+local StatsLabel = Instance.new("TextLabel")
+StatsLabel.Size = UDim2.fromScale(1,0.2)
+StatsLabel.Position = UDim2.fromScale(0,0.65)
 StatsLabel.BackgroundTransparency = 1
 StatsLabel.Font = Enum.Font.GothamBold
 StatsLabel.TextScaled = true
 StatsLabel.TextColor3 = Color3.fromRGB(255,255,255)
-StatsLabel.Visible = false
+StatsLabel.Parent = Main
 
--- Tab Logic
-ESPBtn.MouseButton1Click:Connect(function()
-	ContentText.Text = "ESP SETTINGS"
-	ESPToggle.Visible = true
-	AimToggle.Visible = false
-	StatsLabel.Visible = false
-	StatsVisible = false
-end)
+--// ================= ESP =================
+local function GetESPColor(player)
+	if player.Team and LocalPlayer.Team then
+		return player.Team.TeamColor.Color
+	end
+	return Color3.fromRGB(255,255,255)
+end
 
-AimBtn.MouseButton1Click:Connect(function()
-	ContentText.Text = "SILENT AIM"
-	ESPToggle.Visible = false
-	AimToggle.Visible = true
-	StatsLabel.Visible = false
-	StatsVisible = false
-end)
+local function CreateESP(player)
+	if player == LocalPlayer or ESP_CACHE[player] then return end
+	local box = Drawing.new("Square")
+	box.Thickness = 2
+	box.Filled = false
+	box.Visible = false
 
-StatsBtn.MouseButton1Click:Connect(function()
-	ContentText.Text = "PLAYER STATS"
-	ESPToggle.Visible = false
-	AimToggle.Visible = false
-	StatsLabel.Visible = true
-	StatsVisible = true
-end)
+	local name = Drawing.new("Text")
+	name.Size = 14
+	name.Center = true
+	name.Outline = true
+	name.Visible = false
 
---// ================= SILENT AIM LOADSTRING =================
-AimToggle.MouseButton1Click:Connect(function()
-	SilentAimEnabled = not SilentAimEnabled
-	AimToggle.Text = SilentAimEnabled and "Silent Aim : ON" or "Silent Aim : OFF"
-	if SilentAimEnabled then
-		pcall(function()
-			loadstring(game:HttpGet('https://raw.githubusercontent.com/dylanvalx/universal-slient-aim/refs/heads/main/slient%20aim'))()
-		end)
+	ESP_CACHE[player] = {Box = box, Name = name}
+end
+
+local function RemoveESP(player)
+	if ESP_CACHE[player] then
+		for _,v in pairs(ESP_CACHE[player]) do v:Remove() end
+		ESP_CACHE[player] = nil
+	end
+end
+
+for _,p in pairs(Players:GetPlayers()) do CreateESP(p) end
+Players.PlayerAdded:Connect(CreateESP)
+Players.PlayerRemoving:Connect(RemoveESP)
+
+RunService.RenderStepped:Connect(function()
+	for player,esp in pairs(ESP_CACHE) do
+		local char = player.Character
+		local hrp = char and char:FindFirstChild("HumanoidRootPart")
+		local hum = char and char:FindFirstChild("Humanoid")
+		if ESPEnabled and hrp and hum and hum.Health > 0 then
+			local pos,onScreen = Camera:WorldToViewportPoint(hrp.Position)
+			if onScreen then
+				local top = Camera:WorldToViewportPoint(hrp.Position + Vector3.new(0,3,0))
+				local bottom = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0,3,0))
+				local h = math.abs(top.Y - bottom.Y)
+				local w = h/2
+				local c = GetESPColor(player)
+				esp.Box.Color = c
+				esp.Name.Color = c
+				esp.Box.Size = Vector2.new(w,h)
+				esp.Box.Position = Vector2.new(pos.X-w/2,pos.Y-h/2)
+				esp.Box.Visible = true
+				esp.Name.Text = player.DisplayName.." (@"..player.Name..")"
+				esp.Name.Position = Vector2.new(pos.X,pos.Y-h/2-14)
+				esp.Name.Visible = true
+			else
+				esp.Box.Visible = false
+				esp.Name.Visible = false
+			end
+		else
+			esp.Box.Visible = false
+			esp.Name.Visible = false
+		end
 	end
 end)
 
---// ================= GUI KEYBIND =================
-UserInputService.InputBegan:Connect(function(input, processed)
+ESPToggle.MouseButton1Click:Connect(function()
+	ESPEnabled = not ESPEnabled
+	ESPToggle.Text = ESPEnabled and "ESP : ON" or "ESP : OFF"
+end)
+
+--// ================= STATS =================
+task.spawn(function()
+	while true do
+		local t = tick()
+		RunService.RenderStepped:Wait()
+		FPS = math.floor(1 / (tick() - t))
+	end
+end)
+
+RunService.RenderStepped:Connect(function()
+	local ping = math.floor((LocalPlayer:GetNetworkPing() or 0)*1000)
+	StatsLabel.Text = "FPS : "..FPS.."\nPing : "..ping.." ms"
+end)
+
+--// ================= SILENT AIM =================
+local function getPlrsName()
+	for i, v in pairs(game:GetChildren()) do
+		if v.ClassName == "Players" then return v.Name end
+	end
+end
+
+local playersServiceName = getPlrsName()
+local plr = game[playersServiceName].LocalPlayer
+
+-- Main Silent Aim Logic
+task.spawn(function()
+	while true do
+		wait(1)
+		if SilentAimEnabled then
+			for _, v in pairs(game[playersServiceName]:GetPlayers()) do
+				if v.Name ~= plr.Name and v.Character then
+					for _, partName in ipairs({"RightUpperLeg","LeftUpperLeg","HeadHB","HumanoidRootPart"}) do
+						local part = v.Character:FindFirstChild(partName)
+						if part then
+							part.CanCollide = false
+							part.Transparency = 10
+							part.Size = Vector3.new(13,13,13)
+						end
+					end
+				end
+			end
+		end
+	end
+end)
+
+AimToggle.MouseButton1Click:Connect(function()
+	SilentAimEnabled = not SilentAimEnabled
+	AimToggle.Text = SilentAimEnabled and "Silent Aim : ON" or "Silent Aim : OFF"
+end)
+
+-- GUI toggle keybind
+UserInputService.InputBegan:Connect(function(input,processed)
 	if processed then return end
 	if input.KeyCode == Enum.KeyCode.P then
-		GUIVisible = not GUIVisible
-		Main.Visible = GUIVisible
+		Main.Visible = not Main.Visible
 	end
 end)
